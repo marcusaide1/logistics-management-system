@@ -253,26 +253,6 @@ export async function handleTrackingQuery(userMessage) {
   }
 }
 
-  const latestEvent = shipment.events[shipment.events.length - 1];
-  
-  return {
-    type: "tracking_info",
-    content: `
-Your shipment "${shipment.title}" is currently ${shipment.status.toLowerCase()}.
-
-📍 Route: ${shipment.fromCity} → ${shipment.toCity}
-📊 Status: ${latestEvent?.message || shipment.status}
-📌 Last Update: ${latestEvent?.location || "N/A"}
-
-Recent events:
-${shipment.events.slice(-3).map(e => `• ${e.message} (${e.location})`).join("\n")}
-    `.trim(),
-    confidence: 0.95,
-    needsEscalation: false,
-    trackingNumber
-  };
-}
-
 export async function shouldEscalate(messageContent, aiResponse) {
   // Escalate if:
   // 1. User asks for human

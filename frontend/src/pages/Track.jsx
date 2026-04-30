@@ -37,8 +37,7 @@ export function Track() {
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
       <h1 className="text-3xl font-bold text-slate-900">Track a shipment</h1>
       <p className="mt-3 text-slate-700">
-        Enter your tracking number to see the latest status and milestone history. Try the demo number{" "}
-        <span className="font-mono font-semibold">DEMO-TRACK-001</span> after seeding the database.
+        Enter your tracking number to see the latest status and milestone history.
       </p>
 
       <form onSubmit={onSearch} className="mt-8 flex flex-col gap-3 sm:flex-row">
