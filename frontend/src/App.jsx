@@ -28,7 +28,7 @@ export default function App() {
         <Route path="/track" element={<Track />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/secret-admin-login" element={<AdminLogin />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
 

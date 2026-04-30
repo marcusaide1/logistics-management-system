@@ -107,12 +107,6 @@ export function Header() {
               >
                 Sign up
               </Link>
-              <Link
-                to="/admin-login"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 font-medium text-slate-800 hover:bg-slate-50"
-              >
-                Admin
-              </Link>
             </>
           )}
         </div>
@@ -175,9 +169,6 @@ export function Header() {
                 </Link>
                 <Link onClick={() => setOpen(false)} to="/signup" className="rounded-md bg-sky-700 px-3 py-2 text-center text-white">
                   Sign up
-                </Link>
-                <Link onClick={() => setOpen(false)} to="/admin-login" className="rounded-md border bg-white px-3 py-2 text-center">
-                  Admin login
                 </Link>
               </>
             )}
