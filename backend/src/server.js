@@ -5,6 +5,7 @@ import { prisma } from "./db.js";
 import { authRequired, requireRole, signToken } from "./auth.js";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { handleChatMessage, shouldEscalate, createChatSession, saveChatMessage, escalateChat, getChatHistory } from "./chat.js";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -275,6 +276,88 @@ app.get("/admin/users", authRequired(), requireRole("ADMIN"), async (_req, res) 
     select: { id: true, email: true, name: true, role: true, createdAt: true }
   });
   return res.json({ users });
+});
+
+// Chat API endpoints
+app.post("/chat/session", async (req, res) => {
+  const schema = z.object({
+    visitorName: z.string().optional(),
+    visitorEmail: z.string().email().optional()
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+
+  const session = await createChatSession(parsed.data.visitorName, parsed.data.visitorEmail);
+  return res.json({ session: { sessionId: session.sessionId, id: session.id } });
+});
+
+app.post("/chat/message", async (req, res) => {
+  const schema = z.object({
+    sessionId: z.string(),
+    message: z.string().min(1)
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+
+  try {
+    // Save user message
+    await saveChatMessage(parsed.data.sessionId, "user", parsed.data.message);
+
+    // Get AI response
+    const aiResponse = await handleChatMessage(parsed.data.sessionId, parsed.data.message);
+    
+    // Check if needs escalation
+    const { shouldEscalate: needsEscalation, reason } = await shouldEscalate(parsed.data.message, aiResponse);
+    
+    // Save AI response
+    await saveChatMessage(parsed.data.sessionId, "ai", aiResponse.content);
+
+    if (needsEscalation) {
+      const escalation = await escalateChat(parsed.data.sessionId, reason);
+      return res.json({
+        response: aiResponse,
+        escalated: true,
+        escalationId: escalation.id
+      });
+    }
+
+    return res.json({ response: aiResponse, escalated: false });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: err.message || "Chat error" });
+  }
+});
+
+app.get("/chat/history/:sessionId", async (req, res) => {
+  try {
+    const history = await getChatHistory(req.params.sessionId);
+    if (!history) return res.status(404).json({ error: "Session not found" });
+    return res.json({ history });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/chat/escalate", authRequired(), requireRole("ADMIN"), async (req, res) => {
+  const schema = z.object({
+    escalationId: z.string(),
+    assignedTo: z.string().email()
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+
+  try {
+    const escalation = await prisma.chatEscalation.update({
+      where: { id: parsed.data.escalationId },
+      data: {
+        status: "IN_PROGRESS",
+        assignedTo: parsed.data.assignedTo
+      }
+    });
+    return res.json({ escalation });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.use((err, _req, res, _next) => {

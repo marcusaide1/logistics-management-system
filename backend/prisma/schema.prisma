@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -33,6 +33,7 @@ model User {
   shipments Shipment[]
   payments  Payment[]
   contacts  ContactMessage[]
+  chatSessions ChatSession[]
 }
 
 model Shipment {
@@ -88,5 +89,44 @@ model ContactMessage {
 
   userId String?
   user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model ChatSession {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique
+  visitorName String?
+  visitorEmail String?
+  status      String   @default("ACTIVE") // ACTIVE|ESCALATED|CLOSED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+  escalation ChatEscalation?
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sender    String   // "user" or "ai"
+  content   String
+  createdAt DateTime @default(now())
+
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+model ChatEscalation {
+  id              String   @id @default(cuid())
+  reason          String
+  assignedTo      String?  // admin email
+  status          String   @default("PENDING") // PENDING|IN_PROGRESS|RESOLVED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  sessionId String   @unique
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
