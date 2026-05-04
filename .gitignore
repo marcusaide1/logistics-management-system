@@ -1,0 +1,15 @@
+# Node dependencies
+/backend/node_modules/
+/frontend/node_modules/
+
+# Environment
+.env
+/backend/.env
+/frontend/.env*
+
+# Local database
+/backend/prisma/dev.db
+
+# Editor and OS files
+.DS_Store
+Thumbs.db

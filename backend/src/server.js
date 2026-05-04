@@ -6,6 +6,7 @@ import { authRequired, requireRole, signToken } from "./auth.js";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { handleChatMessage, shouldEscalate, createChatSession, saveChatMessage, escalateChat, getChatHistory } from "./chat.js";
+import { sendPasswordResetEmail, emailTransportConfigured } from "./mailer.js";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -123,8 +124,19 @@ app.post("/auth/forgot-password", async (req, res) => {
     data: { resetToken, resetTokenExpiry: expiry }
   });
 
-  if (process.env.NODE_ENV !== "production") {
+  let emailDelivered = false;
+  try {
+    emailDelivered = await sendPasswordResetEmail(parsed.data.email, resetToken);
+  } catch (err) {
+    console.error("Password reset email failed:", err);
+  }
+
+  if (!emailDelivered && process.env.NODE_ENV !== "production") {
     console.log(`Password reset token for ${parsed.data.email}: ${resetToken}`);
+  }
+
+  if (process.env.NODE_ENV !== "production" || !emailTransportConfigured()) {
+    responsePayload.resetToken = resetToken;
   }
 
   return res.json(responsePayload);

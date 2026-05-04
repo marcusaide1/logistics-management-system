@@ -64,7 +64,7 @@ Then open `http://localhost`. PostgreSQL runs automatically as part of the stack
 
 ### Notes
 
-- Email sending is stubbed (contact form stores messages in DB).
+- Email sending is enabled when SMTP environment variables are configured. Password reset tokens are still logged in development or returned from the API when email is not configured.
 - Payment portal is a starter “checkout record” flow (no real card processing yet).
 - To wire real payments later, add Stripe and replace the `/payments/checkout` stub.
 
