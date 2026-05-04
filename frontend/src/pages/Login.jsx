@@ -65,6 +65,11 @@ export function Login() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
+        <div className="text-right text-sm">
+          <Link className="font-medium text-sky-800 hover:underline" to="/forgot-password">
+            Forgot password?
+          </Link>
+        </div>
         <button
           type="submit"
           disabled={busy}

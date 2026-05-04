@@ -8,6 +8,7 @@ import { Contact } from "./pages/Contact.jsx";
 import { Track } from "./pages/Track.jsx";
 import { Login } from "./pages/Login.jsx";
 import { Signup } from "./pages/Signup.jsx";
+import { ForgotPassword } from "./pages/ForgotPassword.jsx";
 import { AdminLogin } from "./pages/AdminLogin.jsx";
 import { Privacy } from "./pages/Privacy.jsx";
 import { Terms } from "./pages/Terms.jsx";
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/track" element={<Track />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/secret-admin-login" element={<AdminLogin />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />

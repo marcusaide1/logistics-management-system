@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { apiFetch } from "../api.js";
 import { useToast } from "../toast.jsx";
 
-export function ChatWidget() {
+export function ChatWidget({ systemOnline = true }) {
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -17,7 +17,23 @@ export function ChatWidget() {
     if (open && !sessionId) {
       initializeSession();
     }
-  }, [open, sessionId]);
+  }, [open, sessionId, systemOnline]);
+
+  useEffect(() => {
+    if (!systemOnline && open) {
+      setMessages([
+        {
+          sender: "ai",
+          content:
+            "Support is currently offline. Please check back once someone is online.",
+          timestamp: new Date()
+        }
+      ]);
+      setInput("");
+      setSessionId(null);
+      setEscalated(false);
+    }
+  }, [systemOnline, open]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -25,6 +41,11 @@ export function ChatWidget() {
   }, [messages]);
 
   async function initializeSession() {
+    if (!systemOnline) {
+      push("Support is currently offline. Please check back later.", "error");
+      return;
+    }
+
     try {
       const data = await apiFetch("/chat/session", {
         method: "POST",
@@ -47,9 +68,26 @@ export function ChatWidget() {
     }
   }
 
+  async function startNewChat() {
+    // Reset all chat state
+    setSessionId(null);
+    setMessages([]);
+    setInput("");
+    setLoading(false);
+    setEscalated(false);
+    
+    // Initialize new session
+    await initializeSession();
+  }
+
   async function handleSendMessage(e) {
     e.preventDefault();
-    if (!input.trim() || !sessionId || loading) return;
+    if (!input.trim() || !systemOnline || !sessionId || loading) {
+      if (!systemOnline) {
+        push("Support is currently offline. Please try again later.", "error");
+      }
+      return;
+    }
 
     const userMsg = input.trim();
     setInput("");
@@ -101,10 +139,18 @@ export function ChatWidget() {
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 h-12 w-12 rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-700 flex items-center justify-center text-xl z-40"
+        onClick={() => {
+          if (!systemOnline) {
+            push("Support is offline. Please try again later.", "error");
+            return;
+          }
+          setOpen(true);
+        }}
+        className={`fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg flex items-center justify-center text-xl z-40 ${
+          systemOnline ? "bg-sky-600 text-white hover:bg-sky-700" : "bg-slate-400 text-slate-100 cursor-not-allowed"
+        }`}
         aria-label="Open chat"
-        title="Chat with us"
+        title={systemOnline ? "Chat with us" : "Support is offline"}
       >
         💬
       </button>
@@ -121,13 +167,23 @@ export function ChatWidget() {
             {escalated ? "Human agent connecting..." : "AI Assistant"}
           </p>
         </div>
-        <button
-          onClick={() => setOpen(false)}
-          className="text-white hover:bg-sky-700 rounded px-2 py-1"
-          aria-label="Close chat"
-        >
-          ✕
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={startNewChat}
+            className="text-white hover:bg-sky-700 rounded px-2 py-1 text-xs"
+            aria-label="Start new chat"
+            title="Start new chat"
+          >
+            🔄
+          </button>
+          <button
+            onClick={() => setOpen(false)}
+            className="text-white hover:bg-sky-700 rounded px-2 py-1"
+            aria-label="Close chat"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -184,13 +240,13 @@ export function ChatWidget() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={escalated ? "Waiting for agent..." : "Type your message..."}
-            disabled={loading || escalated}
+            placeholder={!systemOnline ? "Support is offline" : escalated ? "Waiting for agent..." : "Type your message..."}
+            disabled={loading || escalated || !systemOnline}
             className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100"
           />
           <button
             type="submit"
-            disabled={loading || !input.trim() || escalated}
+            disabled={loading || !input.trim() || escalated || !systemOnline}
             className="bg-sky-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-sky-700 disabled:opacity-50"
           >
             Send

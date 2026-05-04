@@ -18,8 +18,33 @@ app.use(
   })
 );
 
+let systemOnline = process.env.SYSTEM_ONLINE !== "false";
+const offlineMessage =
+  process.env.OFFLINE_MESSAGE ||
+  "The service is currently offline. Please wait until support is available.";
+
+function systemOnlineRequired(req, res, next) {
+  if (!systemOnline) {
+    return res.status(503).json({ error: offlineMessage });
+  }
+  return next();
+}
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/system/status", (_req, res) => {
+  res.json({ online: systemOnline });
+});
+
+app.post("/system/status", authRequired(), requireRole("ADMIN"), async (req, res) => {
+  const schema = z.object({ online: z.boolean() });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+
+  systemOnline = parsed.data.online;
+  return res.json({ online: systemOnline });
 });
 
 const registerSchema = z.object({
@@ -53,6 +78,15 @@ const loginSchema = z.object({
   password: z.string().min(1)
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email()
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8)
+});
+
 app.post("/auth/login", async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
@@ -70,7 +104,57 @@ app.post("/auth/login", async (req, res) => {
   });
 });
 
-app.get("/me", authRequired(), async (req, res) => {
+app.post("/auth/forgot-password", async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+
+  const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+  const responsePayload = { message: "If an account exists for that email, a reset token has been created." };
+
+  if (!user) {
+    return res.json(responsePayload);
+  }
+
+  const resetToken = Math.random().toString(36).slice(2, 14) + Math.random().toString(36).slice(2, 14);
+  const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await prisma.user.update({
+    where: { email: parsed.data.email },
+    data: { resetToken, resetTokenExpiry: expiry }
+  });
+
+  const devResponse = process.env.NODE_ENV === "production" ? {} : { resetToken };
+  return res.json({ ...responsePayload, ...devResponse });
+});
+
+app.post("/auth/reset-password", async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+
+  const now = new Date();
+  const user = await prisma.user.findFirst({
+    where: {
+      resetToken: parsed.data.token,
+      resetTokenExpiry: { gt: now }
+    }
+  });
+
+  if (!user) return res.status(400).json({ error: "Invalid or expired reset token" });
+
+  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: passwordHash,
+      resetToken: null,
+      resetTokenExpiry: null
+    }
+  });
+
+  return res.json({ message: "Password reset successful. You may now sign in." });
+});
+
+app.get("/me", authRequired(), systemOnlineRequired, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
     select: { id: true, email: true, name: true, role: true, createdAt: true }
@@ -102,7 +186,7 @@ app.post("/contact", async (req, res) => {
   return res.json({ id: msg.id });
 });
 
-app.get("/shipments", authRequired(), async (req, res) => {
+app.get("/shipments", authRequired(), systemOnlineRequired, async (req, res) => {
   if (req.user.role === "ADMIN") {
     const shipments = await prisma.shipment.findMany({
       orderBy: { updatedAt: "desc" },
@@ -130,7 +214,7 @@ const createShipmentSchema = z.object({
   trackingNumber: z.string().min(6).optional()
 });
 
-app.post("/shipments", authRequired(), requireRole("ADMIN"), async (req, res) => {
+app.post("/shipments", authRequired(), systemOnlineRequired, requireRole("ADMIN"), async (req, res) => {
   const parsed = createShipmentSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
@@ -179,7 +263,7 @@ const addEventSchema = z.object({
   location: z.string().optional()
 });
 
-app.post("/shipments/:id/events", authRequired(), requireRole("ADMIN"), async (req, res) => {
+app.post("/shipments/:id/events", authRequired(), systemOnlineRequired, requireRole("ADMIN"), async (req, res) => {
   const parsed = addEventSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
@@ -206,7 +290,7 @@ app.post("/shipments/:id/events", authRequired(), requireRole("ADMIN"), async (r
   return res.json({ shipment: updated });
 });
 
-app.get("/payments", authRequired(), async (req, res) => {
+app.get("/payments", authRequired(), systemOnlineRequired, async (req, res) => {
   if (req.user.role === "ADMIN") {
     const payments = await prisma.payment.findMany({
       orderBy: { createdAt: "desc" },
@@ -232,7 +316,7 @@ const checkoutSchema = z.object({
   shipmentId: z.string().optional()
 });
 
-app.post("/payments/checkout", authRequired(), async (req, res) => {
+app.post("/payments/checkout", authRequired(), systemOnlineRequired, async (req, res) => {
   const parsed = checkoutSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
@@ -261,7 +345,7 @@ app.post("/payments/checkout", authRequired(), async (req, res) => {
   return res.json({ payment });
 });
 
-app.post("/payments/:id/mark-paid", authRequired(), requireRole("ADMIN"), async (req, res) => {
+app.post("/payments/:id/mark-paid", authRequired(), systemOnlineRequired, requireRole("ADMIN"), async (req, res) => {
   const id = req.params.id;
   const payment = await prisma.payment.update({
     where: { id },
@@ -270,7 +354,7 @@ app.post("/payments/:id/mark-paid", authRequired(), requireRole("ADMIN"), async 
   return res.json({ payment });
 });
 
-app.get("/admin/users", authRequired(), requireRole("ADMIN"), async (_req, res) => {
+app.get("/admin/users", authRequired(), systemOnlineRequired, requireRole("ADMIN"), async (_req, res) => {
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, email: true, name: true, role: true, createdAt: true }
@@ -279,10 +363,10 @@ app.get("/admin/users", authRequired(), requireRole("ADMIN"), async (_req, res) 
 });
 
 // Chat API endpoints
-app.post("/chat/session", async (req, res) => {
+app.post("/chat/session", systemOnlineRequired, async (req, res) => {
   const schema = z.object({
     visitorName: z.string().optional(),
-    visitorEmail: z.string().email().optional()
+    visitorEmail: z.string().email().nullable().optional()
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
@@ -291,7 +375,7 @@ app.post("/chat/session", async (req, res) => {
   return res.json({ session: { sessionId: session.sessionId, id: session.id } });
 });
 
-app.post("/chat/message", async (req, res) => {
+app.post("/chat/message", systemOnlineRequired, async (req, res) => {
   const schema = z.object({
     sessionId: z.string(),
     message: z.string().min(1)
@@ -328,7 +412,7 @@ app.post("/chat/message", async (req, res) => {
   }
 });
 
-app.get("/chat/history/:sessionId", async (req, res) => {
+app.get("/chat/history/:sessionId", systemOnlineRequired, async (req, res) => {
   try {
     const history = await getChatHistory(req.params.sessionId);
     if (!history) return res.status(404).json({ error: "Session not found" });
@@ -338,7 +422,7 @@ app.get("/chat/history/:sessionId", async (req, res) => {
   }
 });
 
-app.post("/chat/escalate", authRequired(), requireRole("ADMIN"), async (req, res) => {
+app.post("/chat/escalate", authRequired(), systemOnlineRequired, requireRole("ADMIN"), async (req, res) => {
   const schema = z.object({
     escalationId: z.string(),
     assignedTo: z.string().email()
