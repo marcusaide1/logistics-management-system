@@ -1,34 +1,51 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "./db.js";
 
-async function upsertUser({ email, password, name, role }) {
+function randomPassword() {
+  return crypto.randomBytes(8).toString("base64url");
+}
+
+async function upsertUser({ email, password, name, role, updatePassword = false }) {
   const existing = await prisma.user.findUnique({ where: { email } });
-  const passwordHash = await bcrypt.hash(password, 10);
   if (existing) {
+    const data = { name, role };
+    if (updatePassword) {
+      data.password = await bcrypt.hash(password, 10);
+    }
     return prisma.user.update({
       where: { email },
-      data: { password: passwordHash, name, role }
+      data
     });
   }
+
+  const passwordHash = await bcrypt.hash(password, 10);
   return prisma.user.create({
     data: { email, password: passwordHash, name, role }
   });
 }
 
 async function main() {
+  const adminPassword = process.env.ADMIN_PASSWORD || randomPassword();
+  const clientPassword = process.env.CLIENT_PASSWORD || randomPassword();
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@logi.local";
+  const clientEmail = process.env.CLIENT_EMAIL || "client@logi.local";
+
   const admin = await upsertUser({
-    email: "admin@logi.local",
-    password: "Admin123!",
+    email: adminEmail,
+    password: adminPassword,
     name: "Operations Admin",
-    role: "ADMIN"
+    role: "ADMIN",
+    updatePassword: Boolean(process.env.ADMIN_PASSWORD)
   });
 
   const client = await upsertUser({
-    email: "client@logi.local",
-    password: "Client123!",
+    email: clientEmail,
+    password: clientPassword,
     name: "Demo Client",
-    role: "CLIENT"
+    role: "CLIENT",
+    updatePassword: Boolean(process.env.CLIENT_PASSWORD)
   });
 
   const existingDemo = await prisma.shipment.findFirst({

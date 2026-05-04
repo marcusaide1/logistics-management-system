@@ -123,8 +123,11 @@ app.post("/auth/forgot-password", async (req, res) => {
     data: { resetToken, resetTokenExpiry: expiry }
   });
 
-  const devResponse = process.env.NODE_ENV === "production" ? {} : { resetToken };
-  return res.json({ ...responsePayload, ...devResponse });
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`Password reset token for ${parsed.data.email}: ${resetToken}`);
+  }
+
+  return res.json(responsePayload);
 });
 
 app.post("/auth/reset-password", async (req, res) => {
