@@ -33,8 +33,8 @@ export function Contact() {
       <h1 className="text-3xl font-bold text-slate-900">Contact</h1>
       <p className="mt-3 text-slate-700">
         For quotes, support, or partnership inquiries, email{" "}
-        <a className="font-medium text-sky-800 hover:underline" href="mailto:support@logiflow.example">
-          support@logiflow.example
+        <a className="font-medium text-sky-800 hover:underline" href="mailto:aidenehimarcus@gmail.com">
+          aidenehimarcus@gmail.com
         </a>{" "}
         or use the form below.
       </p>

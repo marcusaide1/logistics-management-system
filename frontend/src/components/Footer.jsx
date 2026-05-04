@@ -41,8 +41,8 @@ export function Footer() {
             <span className="font-medium">HQ:</span> 1200 Commerce Blvd, Houston, TX
           </p>
           <p className="text-sm">
-            <a className="hover:underline" href="mailto:support@logiflow.example">
-              support@logiflow.example
+            <a className="hover:underline" href="mailto:aidenehimarcus@gmail.com">
+              aidenehimarcus@gmail.com
             </a>
           </p>
           <p className="text-sm">+1 (800) 555-0199</p>

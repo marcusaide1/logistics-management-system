@@ -12,11 +12,11 @@ const KNOWLEDGE_BASE = {
   },
   pricing: {
     patterns: [/how.*much|cost|price|fee|charge/i],
-    response: "Our pricing depends on several factors:\n• Shipment weight and dimensions\n• Origin and destination\n• Service type (standard/express)\n• Additional services (insurance, customs)\n\nFor a personalized quote, please contact our sales team at sales@logiflow.example or use our contact form."
+    response: "Our pricing depends on several factors:\n• Shipment weight and dimensions\n• Origin and destination\n• Service type (standard/express)\n• Additional services (insurance, customs)\n\nFor a personalized quote, please contact our sales team at aidenehimarcus@gmail.com or use our contact form."
   },
   contact: {
     patterns: [/contact|phone|email|support|help/i],
-    response: "You can reach us through:\n• Email: support@logiflow.example\n• Phone: 1-800-LOGISTICS\n• Live chat: You're talking to us now!\n• Contact form: Available on our website\n\nOur support team is available 24/7."
+    response: "You can reach us through:\n• Email: aidenehimarcus@gmail.com\n• Phone: 1-800-LOGISTICS\n• Live chat: You're talking to us now!\n• Contact form: Available on our website\n\nOur support team is available 24/7."
   },
   delivery: {
     patterns: [/delivery.*time|how.*long|estimate|when.*arrive/i],

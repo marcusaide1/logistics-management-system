@@ -71,8 +71,8 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 text-sm md:flex">
-          <a className="text-slate-800 hover:underline" href="mailto:support@logiflow.example">
-            support@logiflow.example
+          <a className="text-slate-800 hover:underline" href="mailto:aidenehimarcus@gmail.com">
+            aidenehimarcus@gmail.com
           </a>
           {user ? (
             <>
@@ -139,8 +139,8 @@ export function Header() {
             <NavLink onClick={() => setOpen(false)} to="/contact" className={linkClass}>
               Contact
             </NavLink>
-            <a className="px-3 py-2 text-sm text-slate-800" href="mailto:support@logiflow.example">
-              support@logiflow.example
+            <a className="px-3 py-2 text-sm text-slate-800" href="mailto:aidenehimarcus@gmail.com">
+              aidenehimarcus@gmail.com
             </a>
             {user ? (
               <>
