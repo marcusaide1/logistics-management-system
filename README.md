@@ -49,7 +49,7 @@ Open the frontend URL shown by Vite (usually `http://localhost:5173`).
 
 ### Default accounts (seeded)
 
-- Admin: `admin@logi.local` / `Admin123!`
+- Admin: `admin@logi.local` / ``
 - Client: `client@logi.local` / `Client123!`
 
 ### Run with Docker (PostgreSQL + nginx)
