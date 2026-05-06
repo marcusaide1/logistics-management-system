@@ -39,6 +39,10 @@ export function Login() {
         <Link className="font-medium text-sky-800 hover:underline" to="/signup">
           Create an account
         </Link>
+        . Admin?{" "}
+        <Link className="font-medium text-sky-800 hover:underline" to="/admin-login">
+          Admin login
+        </Link>
         .
       </p>
 
