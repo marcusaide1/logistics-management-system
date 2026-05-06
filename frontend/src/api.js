@@ -1,9 +1,6 @@
-const rawBase =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
-
 export function apiUrl(path) {
   const p = path.startsWith("/") ? path : `/${path}`;
-  return `${rawBase}${p}`;
+  return `/api${p}`;
 }
 
 export async function apiFetch(path, { token, ...init } = {}) {
