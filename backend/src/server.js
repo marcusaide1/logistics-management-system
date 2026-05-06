@@ -88,7 +88,7 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8)
 });
 
-app.post("/auth/login", async (req, res) => {
+app.post("/auth/login", systemOnlineRequired, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
