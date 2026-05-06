@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import https from "https";
 import { prisma } from "./db.js";
 import { authRequired, requireRole, signToken } from "./auth.js";
 import bcrypt from "bcryptjs";
@@ -19,10 +20,36 @@ app.use(
   })
 );
 
-let systemOnline = process.env.SYSTEM_ONLINE !== "false";
+let systemOnline = true; // will be updated by connectivity check
+let manualOverride = false; // if true, manual control; else auto-detect
 const offlineMessage =
   process.env.OFFLINE_MESSAGE ||
   "The service is currently offline. Please wait until support is available.";
+
+function checkOnlineStatus() {
+  return new Promise((resolve) => {
+    const req = https.get('https://www.google.com', { timeout: 5000 }, (res) => {
+      resolve(true);
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+// Check connectivity every 30 seconds
+setInterval(async () => {
+  if (!manualOverride) {
+    systemOnline = await checkOnlineStatus();
+  }
+}, 30000);
+
+// Initial check
+checkOnlineStatus().then((online) => {
+  systemOnline = online;
+});
 
 function systemOnlineRequired(req, res, next) {
   if (!systemOnline) {
@@ -44,6 +71,7 @@ app.post("/system/status", authRequired(), requireRole("ADMIN"), async (req, res
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
 
+  manualOverride = true;
   systemOnline = parsed.data.online;
   return res.json({ online: systemOnline });
 });
