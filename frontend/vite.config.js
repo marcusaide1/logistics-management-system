@@ -5,12 +5,20 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      ".trycloudflare.com"
+    ],
     proxy: {
       "/api": {
-        target: "http://localhost:8080",
+        target: process.env.VITE_API_URL || "http://localhost:8080",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, "")
       }
     }
+  },
+  define: {
+    __API_URL__: JSON.stringify(process.env.VITE_API_URL || "http://localhost:8080")
   }
 });
